@@ -38,6 +38,7 @@ from sugar3.graphics.icon import Icon
 from sugar3.graphics.menuitem import MenuItem
 
 from jarabe.journal import journalwindow
+from jarabe.journal import model
 from jarabe.webservice import account, accountsmanager
 
 ACCOUNT_NEEDS_ATTENTION = 0
@@ -95,7 +96,9 @@ class _SharedJournalEntry(account.SharedJournalEntry):
         self._account = fbaccount
         self._alert = None
 
-    def get_share_menu(self, journal_entry_metadata):
+    def get_share_menu(self, get_uid_list_cb):
+        uid = get_uid_list_cb()[0]
+        journal_entry_metadata = model.get(uid)
         menu = _ShareMenu(
             self._account.facebook,
             journal_entry_metadata,
