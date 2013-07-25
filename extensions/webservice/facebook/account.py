@@ -96,9 +96,7 @@ class _SharedJournalEntry(account.SharedJournalEntry):
         self._account = fbaccount
         self._alert = None
 
-    def get_share_menu(self, get_uid_list_cb):
-        uid = get_uid_list_cb()[0]
-        journal_entry_metadata = model.get(uid)
+    def get_share_menu(self, journal_entry_metadata):
         menu = _ShareMenu(
             self._account.facebook,
             journal_entry_metadata,
