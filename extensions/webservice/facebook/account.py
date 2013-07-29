@@ -96,10 +96,10 @@ class _SharedJournalEntry(account.SharedJournalEntry):
         self._account = fbaccount
         self._alert = None
 
-    def get_share_menu(self, journal_entry_metadata):
+    def get_share_menu(self, get_uid_list):
         menu = _ShareMenu(
             self._account.facebook,
-            journal_entry_metadata,
+            get_uid_list,
             self._account.get_token_state() == self._account.STATE_VALID)
         self._connect_transfer_signals(menu)
         return menu
@@ -140,7 +140,7 @@ class _ShareMenu(MenuItem):
                                    ([str])),
     }
 
-    def __init__(self, account, metadata, is_active):
+    def __init__(self, account, get_uid_list, is_active):
         MenuItem.__init__(self, ACCOUNT_NAME)
 
         self._facebook = account
@@ -151,16 +151,11 @@ class _ShareMenu(MenuItem):
         self.set_image(Icon(icon_name=icon_name,
                             icon_size=Gtk.IconSize.MENU))
         self.show()
-        self._metadata = metadata
-        self._comment = '%s: %s' % (self._get_metadata_by_key('title'),
-                                    self._get_metadata_by_key('description'))
-
+        self._get_uid_list = get_uid_list
         self.connect('activate', self._facebook_share_menu_cb)
 
-    def _get_metadata_by_key(self, key, default_value=''):
-        if key in self._metadata:
-            return self._metadata[key]
-        return default_value
+    def _get_metadata(self):
+        return model.get(self._get_uid_list()[0])
 
     def _facebook_share_menu_cb(self, menu_item):
         logging.debug('_facebook_share_menu_cb')
@@ -183,12 +178,20 @@ class _ShareMenu(MenuItem):
         if os.path.exists(tmp_file):
             os.unlink(tmp_file)
 
+        metadata = self._get_metadata()
+
+        comment = ''
+        if 'title' in metadata:
+            comment += '%s:' % str(metadata['title'])
+        if 'description' in metadata:
+            comment += str(metadata['description'])
+
         fb_photo.connect('comment-added', self._comment_added_cb)
         fb_photo.connect('comment-add-failed', self._comment_add_failed_cb)
-        fb_photo.add_comment(str(self._comment))
+        fb_photo.add_comment(comment)
 
         try:
-            ds_object = datastore.get(self._metadata['uid'])
+            ds_object = datastore.get(metadata['uid'])
             ds_object.metadata['fb_object_id'] = fb_object_id
             datastore.write(ds_object, update_mtime=False)
         except Exception as ex:
@@ -213,7 +216,8 @@ class _ShareMenu(MenuItem):
             GdkPixbuf.PixbufLoader.new_with_mime_type('image/png')
         pixbufloader.set_size(300, 225)
         try:
-            pixbufloader.write(self._metadata['preview'])
+            metadata = self._get_metadata()
+            pixbufloader.write(metadata['preview'])
             pixbuf = pixbufloader.get_pixbuf()
         except Exception as ex:
             logging.debug("_image_file_from_metadata: %s" % (str(ex)))
