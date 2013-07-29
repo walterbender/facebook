@@ -21,6 +21,7 @@ import urllib
 import urlparse
 
 from gi.repository import GConf
+from gi.repository import Gtk
 from gi.repository import WebKit
 
 from jarabe.webservice import accountsmanager
@@ -52,7 +53,10 @@ class WebService(WebService):
         for c in container.get_children():
             container.remove(c)
 
-        container.add(wkv)
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.add(wkv)
+
+        container.add(scrolled)
         container.show_all()
 
     def _fb_auth_url(self):
