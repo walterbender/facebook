@@ -34,9 +34,9 @@ class WebService(WebService):
     FB_REDIRECT_URI = "http://www.sugarlabs.org"
 
     def __init__(self):
-        logging.error('GETTING FB ACCOUNT')
+        logging.debug('GETTING FB ACCOUNT')
         self._account = accountsmanager.get_account('facebook')
-        logging.error(self._account)
+        logging.debug(self._account)
 
     def get_icon_name(self):
         return 'facebook-share'
@@ -80,7 +80,7 @@ class WebService(WebService):
                                        int(params['expires_in'][0]))
 
     def _fb_save_access_token(self, access_token, expires_in):
-        logging.error('FB SAVE ACCESS TOKEN')
+        logging.debug('FB SAVE ACCESS TOKEN')
         client = GConf.Client.get_default()
 
         # client.set_string(self._account.Account.ACCESS_TOKEN_KEY,
@@ -95,5 +95,5 @@ class WebService(WebService):
 
 
 def get_service():
-    logging.error('GET FB SERVICE')
+    logging.debug('GET FB SERVICE')
     return WebService()
