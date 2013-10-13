@@ -162,15 +162,18 @@ class _ShareMenu(MenuItem):
 
         self.emit('transfer-state-changed', _('Upload started'))
         tmp_file = tempfile.mktemp()
-        self._image_file_from_metadata(tmp_file)
+        if self._image_file_from_metadata(tmp_file):
 
-        photo = self._facebook.FbPhoto()
-        photo.connect('photo-created', self._photo_created_cb, tmp_file)
-        photo.connect('photo-create-failed',
-                      self._photo_create_failed_cb,
-                      tmp_file)
+            photo = self._facebook.FbPhoto()
+            photo.connect('photo-created', self._photo_created_cb, tmp_file)
+            photo.connect('photo-create-failed',
+                          self._photo_create_failed_cb,
+                          tmp_file)
 
-        GObject.idle_add(photo.create, tmp_file)
+            GObject.idle_add(photo.create, tmp_file)
+        else:
+            logging.error(
+                "_facebook_share_menu_cb failed to get photo from datastore")
 
     def _photo_created_cb(self, fb_photo, fb_object_id, tmp_file):
         logging.debug("_photo_created_cb")
@@ -212,20 +215,31 @@ class _ShareMenu(MenuItem):
 
     def _image_file_from_metadata(self, image_path):
         """ Load a pixbuf from a Journal object. """
-        pixbufloader = \
-            GdkPixbuf.PixbufLoader.new_with_mime_type('image/png')
-        pixbufloader.set_size(300, 225)
+
         try:
             metadata = self._get_metadata()
-            pixbufloader.write(metadata['preview'])
-            pixbuf = pixbufloader.get_pixbuf()
+            if 'mime_type' in metadata and 'image' in metadata['mime_type']:
+                ds_object = datastore.get(metadata['uid'])
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file(ds_object.file_path)
+            else:
+                pixbufloader = \
+                    GdkPixbuf.PixbufLoader.new_with_mime_type('image/png')
+                pixbufloader.set_size(300, 225)
+                pixbufloader.write(metadata['preview'])
+                pixbuf = pixbufloader.get_pixbuf()
+                pixbufloader.close()
         except Exception as ex:
-            logging.debug("_image_file_from_metadata: %s" % (str(ex)))
-            pixbuf = None
+            logging.error("_image_file_from_metadata: %s" % (str(ex)))
+            return False
 
-        pixbufloader.close()
-        if pixbuf:
+        try:
             pixbuf.savev(image_path, 'png', [], [])
+            logging.debug('_image_file_from_metadata: success %s' %
+                          (image_path))
+            return True
+        except Exception as ex:
+            logging.error("_image_file_from_metadata: %s" % (str(ex)))
+            return False
 
 
 class _RefreshMenu(MenuItem):
